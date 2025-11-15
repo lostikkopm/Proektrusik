@@ -3,24 +3,27 @@ import math
 import random
 import os
 
-# Ініціалізація
 pygame.init()
 WIDTH, HEIGHT = 600, 800
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Snow Fort Defense ❄️")
 
-# Завантаження фону
 BACKGROUND = pygame.image.load("images/fon/fon1.png")
 BACKGROUND = pygame.transform.scale(BACKGROUND, (WIDTH, HEIGHT))
 
-# Кольори
+TOWER_IMG = pygame.image.load("images/hq720-removebg-preview.png")
+TOWER_IMG = pygame.transform.scale(TOWER_IMG, (50, 50))
+
+ENEMY_IMG = pygame.image.load("images/Tower-Defense-Monster-2D-Sprites-removebg-preview.png")
+ENEMY_IMG = pygame.transform.scale(ENEMY_IMG, (40, 40))
+
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 150, 255)
 BLACK = (0, 0, 0)
 
-# Класи
+
 class Enemy:
     def __init__(self, path):
         self.path = path
@@ -29,15 +32,19 @@ class Enemy:
         self.speed = 1.0
         self.path_index = 0
         self.alive = True
+        self.img = ENEMY_IMG
 
     def move(self):
         if self.path_index + 1 >= len(self.path):
             self.alive = False
             return
+
         x1, y1 = self.path[self.path_index]
         x2, y2 = self.path[self.path_index + 1]
+
         dir_vector = (x2 - x1, y2 - y1)
         distance = math.hypot(*dir_vector)
+
         dir_vector = (dir_vector[0] / distance, dir_vector[1] / distance)
         self.x += dir_vector[0] * self.speed
         self.y += dir_vector[1] * self.speed
@@ -46,9 +53,12 @@ class Enemy:
             self.path_index += 1
 
     def draw(self, win):
-        pygame.draw.circle(win, RED, (int(self.x), int(self.y)), 10)
-        pygame.draw.rect(win, RED, (self.x - 15, self.y - 20, 30, 5))
-        pygame.draw.rect(win, GREEN, (self.x - 15, self.y - 20, 30 * (self.health / 100), 5))
+        win.blit(self.img, (self.x - 20, self.y - 20))
+
+        # health bar
+        pygame.draw.rect(win, RED, (self.x - 20, self.y - 30, 40, 5))
+        pygame.draw.rect(win, GREEN, (self.x - 20, self.y - 30, 40 * (self.health / 100), 5))
+
 
 class Bullet:
     def __init__(self, x, y, target):
@@ -68,21 +78,21 @@ class Bullet:
     def draw(self, win):
         pygame.draw.circle(win, BLUE, (int(self.x), int(self.y)), 5)
 
+
 class Tower:
     def __init__(self, x, y):
-        self.x = x
-        self.y = y
+        self.x, self.y = x, y
         self.range = 120
         self.cooldown = 0
-        self.reload_time = 60  # кадрів між пострілами
+        self.reload_time = 60
         self.bullets = []
+        self.img = TOWER_IMG
 
     def shoot(self, enemies):
         if self.cooldown > 0:
             self.cooldown -= 1
             return
 
-        # Знаходимо найближчого ворога в межах радіуса
         nearest = None
         nearest_dist = self.range
         for e in enemies:
@@ -96,13 +106,14 @@ class Tower:
             self.cooldown = self.reload_time
 
     def draw(self, win):
-        pygame.draw.circle(win, BLACK, (int(self.x), int(self.y)), 15)
+        win.blit(self.img, (self.x - 25, self.y - 25))
         pygame.draw.circle(win, (150,150,150), (int(self.x), int(self.y)), self.range, 1)
         for b in self.bullets:
             b.draw(win)
 
-# Створюємо доріжку (path)
+
 PATH = [(50, 750), (50, 400), (300, 400), (300, 150), (550, 150), (550, 50)]
+
 
 def main():
     clock = pygame.time.Clock()
@@ -116,20 +127,15 @@ def main():
         clock.tick(60)
         WIN.blit(BACKGROUND, (0, 0))
 
-        # Створення ворогів
         wave_timer += 1
         if wave_timer >= spawn_delay:
             enemies.append(Enemy(PATH))
             wave_timer = 0
 
-        # Рух ворогів
         for e in enemies:
             e.move()
-
-        # Видалення мертвих ворогів
         enemies = [e for e in enemies if e.alive]
 
-        # Башти
         for t in towers:
             t.shoot(enemies)
             for b in t.bullets:
@@ -144,21 +150,22 @@ def main():
                             break
             t.draw(WIN)
 
-        # Малюємо ворогів
         for e in enemies:
             e.draw(WIN)
 
-        # Події
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
+
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                x, y = pygame.mouse.get_pos()
-                towers.append(Tower(x, y))
+                if len(towers) < 10:
+                    x, y = pygame.mouse.get_pos()
+                    towers.append(Tower(x, y))
 
         pygame.display.update()
 
     pygame.quit()
+
 
 if __name__ == "__main__":
     main()
